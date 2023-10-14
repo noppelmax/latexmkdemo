@@ -1,0 +1,96 @@
+
+\documentclass{scrartcl}
+\synctex=1
+
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{csvsimple}
+
+\usepackage{courier}
+\usepackage{listings,color}
+\definecolor{gray}{gray}{0.8}
+\lstset{language=Perl}
+\lstset{commentstyle=\textit}
+\lstset{frame=shadowbox, rulesepcolor=\color{gray}}
+\lstset{basicstyle=\footnotesize\ttfamily,breaklines=true}
+\title{How to combine LibreOffice Calc with LaTex tables?}
+\author{Maximilian Noppel}
+
+\begin{document}
+
+
+\maketitle
+\bibliographystyle{plain}
+
+\section*{What do we want?}
+
+\section*{How do we make it work?}
+Use the following perl script as \texttt{.latexmkrc} in the main folder of your paper. 
+This file sets certain parameters for \texttt{latexmk}.
+Also it alter the way \texttt{latexmk} handles \texttt{csv} slightly.
+Below the code we discuss details of it.
+
+\begin{lstlisting}[numbers=left]
+  @default_files = ('demopaper.tex');
+  $pdflatex      = 'pdflatex -synctex=1';
+  $interaction   = "nonstopmode";
+  
+  add_cus_dep("ods","csv",0,"ods2csv");
+  
+  sub ods2csv {
+      if($_[0] eq ""){
+          return;
+      }
+      my $sourceods = "$_[0].ods";
+      my $sourcecsv = "$_[0].csv";
+      print "Processing $sourceods...\n";
+      system("libreoffice --headless --convert-to csv \"". 
+          $sourceods."\" --outdir tables");
+      system("python src/preprocess_csv.py \"".$sourcecsv. 
+          "\"  --inplace");
+      return;
+  }
+  
+  # Make sure all the dependencies get build initially
+  # Starting from here our real customization starts.
+  # First we scrap for all tables/*.ods files and put them in a list.
+  my @files = <tables/*.ods>;
+  my @dep_files = ();
+  foreach (@files) {
+    @dep_files = (@dep_files, $_)
+  }
+  
+  # Then we iterate over the list
+  # and check if every corresponding csv file
+  # exists. If not we create it with the above
+  # rules. Luckily latexmk takes care for 
+  # rerunning the upper routine whenever
+  # the .ods file changes, once the file exists...
+  foreach (@dep_files) {
+      my ($filetype) = $_ =~ /^.*\.(.*)$/igs;
+      my ($filename) = $_ =~ /^(.*)\..+/igs;
+  
+      if($filetype eq "ods"){
+          if(-e $filename.".csv"){
+          }else{
+              ods2csv($filename);
+          }
+      }
+  }
+\end{lstlisting}
+
+\section*{Results}
+Here you can see a table we created with our setup.
+
+\begin{table}[!h]
+  \caption{
+    Our demotable from LibreOffice Calc
+  }
+  \label{tab:demotable}
+  \centering
+  \include{tables/demotable.tex}
+\end{table}
+
+
+\bibliography{bib/references}
+\end{document}

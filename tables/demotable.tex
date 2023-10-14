@@ -1,0 +1,65 @@
+\newcommand{\mymidruleA}{\cmidrule{1-5}}
+\newcommand{\mymidruleB}{\cmidrule{2-5}}
+\newcommand{\mymidruleC}{\cmidrule{2-2}}
+
+\makeatletter
+\NewDocumentCommand{\markifnotblank}{O{--} O{X} m m}{%
+  \protected@edef\@tempa{#3}%
+  \protected@edef\@tempb{#4}%
+  \expandafter\notblank\expandafter{\@tempa}{#2}{%
+    \expandafter\notblank\expandafter{\@tempb}{\color{gray!40}#2}{#1}%
+  }
+}
+
+\newcommand{\tosuffix}[1]{%
+  \protected@edef\@tempa{#1}%
+  \expandafter\ifstrequal\expandafter{\@tempa}{1}{~(a)}{}%
+  \expandafter\ifstrequal\expandafter{\@tempa}{2}{~(b)}{}%
+  \expandafter\ifstrequal\expandafter{\@tempa}{3}{~(c)}{}%
+}
+\makeatother
+
+\newcommand{\mycsvreader}[3][mymidruleB]{%
+  \csvreader[
+    head to column names,
+    head to column names prefix = COL,
+    filter = \not\equal{\csuse{COL#3}}{} \and \not\equal{\COLshowinpaper}{},
+    late after line=\\\csuse{#1},
+    late after last line=\\
+  ]{#2}{}%
+  {
+  &
+  \cite{\COLpaper}\tosuffix{\COLsuffix} & % Reference
+  \markifnotblank{\COLhouses}{} & % Houses
+  \markifnotblank{\COLstreets}{} & % Streets
+  \markifnotblank{\COLwalls}{} & % Walls
+  \COLcomment
+  }
+}
+
+\begin{tabular}{
+    ll
+    ccc % threat model
+    l % comment
+  }
+  \toprule
+  &
+  \multirow{2}{*}{\textbf{Paper} } &
+  \multicolumn{3}{c}{\textbf{Which part?}} &
+  \multirow{2}{*}{\textbf{Comment} } \\
+  \cmidrule{3-5}
+                  &
+                  &
+  \textbf{Houses}  &
+  \textbf{Streets}  &
+  \textbf{Walls} &
+  
+  \\
+  \mymidruleA
+  \multirow{3}{*}{Hello}
+  \mycsvreader[]{tables/demotable.csv}{hello}
+  \mymidruleA
+  \multirow{3}{*}{Goodbye}
+  \mycsvreader[]{tables/demotable.csv}{goodbye}
+  \bottomrule
+\end{tabular}
